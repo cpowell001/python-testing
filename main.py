@@ -30,10 +30,23 @@ def add_client():
 def schedule_visit():
     emp_id = request.json.get('emp_id')
     client_id = request.json.get('client_id')
-    time = request.json.get('datetime')
+    visit_time = request.json.get('datetime')
+
     db = get_db()
+
+    # Conflict check (naively done with string comparison)
+    conflict_query = f"""
+        SELECT * FROM visits 
+        WHERE time = '{visit_time}' AND 
+        (emp_id = {emp_id} OR client_id = {client_id})
+    """
+    conflicts = db.execute(conflict_query).fetchall()
+
+    if conflicts:
+        return jsonify({'msg': 'Conflict detected. Visit not scheduled.'})
+
     db.execute("INSERT INTO visits (emp_id, client_id, time) VALUES (?, ?, ?)", 
-        (emp_id, client_id, time))
+        (emp_id, client_id, visit_time))
     db.commit()
     return jsonify({'msg': 'Scheduled!'})
 
